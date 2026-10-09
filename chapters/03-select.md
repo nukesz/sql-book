@@ -36,11 +36,54 @@ SELECT * FROM products WHERE price > 400 AND stock < 10;
 SELECT * FROM orders WHERE status = 'new' OR status = 'paid';
 ```
 
-Use parentheses when mixing `AND`/`OR`; `AND` binds tighter.
+### Comparison operators
+
+| Operator | Meaning | Example |
+|---|---|---|
+| `=` | equal to (exact match) | `WHERE status = 'paid'` |
+| `<>` (or `!=`) | not equal | `WHERE country <> 'US'` |
+| `<`, `<=`, `>`, `>=` | less/greater than | `WHERE price >= 400` |
+| `BETWEEN a AND b` | in a range, inclusive on both ends | `WHERE price BETWEEN 100 AND 200` |
+| `IN (...)` | equal to any value in a list | `WHERE country IN ('HU', 'DE')` |
+| `IS NULL` / `IS NOT NULL` | missing value check | `WHERE phone IS NULL` |
+
+- Strings use single quotes: `'paid'`. Double quotes denote an identifier (a column or table name).
+- `=` on strings is case-sensitive in Postgres: `'Paid'` does not equal `'paid'`.
+- `NULL` means "unknown", so `= NULL` never matches anything. Use `IS NULL` (chapter 7 explains why).
+- `IN (...)` is shorthand for several `OR`s: `country = 'HU' OR country = 'DE'`.
+
+### Combining conditions
+
+`AND` requires both conditions, `OR` requires either, and `NOT` negates one (`WHERE NOT (price > 400)`).
+
+`AND` binds tighter than `OR`, so use parentheses when mixing them:
+
+```sql
+WHERE status = 'new' OR status = 'paid' AND total > 100     -- new (any total), or paid with total > 100
+WHERE (status = 'new' OR status = 'paid') AND total > 100   -- probably what you meant
+```
 
 Date/time arithmetic uses an `interval`, a typed duration. For example, `now() - interval '7 days'` means the instant seven days ago. Chapter 7 explains time types in detail.
 
 ### Pattern matching
+
+Use `=` for an exact match and `LIKE` for a pattern:
+
+```sql
+WHERE email = 'user1@example.com'      -- exact: only this one value
+WHERE email LIKE 'user1%@example.com'  -- pattern: user1@..., user10@..., user123@...
+```
+
+`LIKE` has two wildcards: `%` matches any number of characters (including none), `_` matches exactly one.
+
+| Pattern | Matches |
+|---|---|
+| `'abc%'` | starts with `abc` |
+| `'%abc'` | ends with `abc` |
+| `'%abc%'` | contains `abc` |
+| `'a_c'` | `abc`, `a1c`, but not `ac` or `abbc` |
+
+`NOT LIKE` negates, `ILIKE` ignores case (Postgres only), and `~` / `~*` match a POSIX regex (case-sensitive / insensitive).
 
 ```sql
 SELECT * FROM customers WHERE email LIKE 'user1%@example.com';  -- % any chars, _ one char
@@ -82,7 +125,7 @@ SELECT CASE WHEN price < 50 THEN 'cheap'
             WHEN price < 250 THEN 'mid'
             ELSE 'premium' END AS tier, name
 FROM products;
-SELECT price::int, CAST(price AS text);        -- type casts, two spellings
+SELECT price::int, CAST(price AS text) FROM products; -- type casts, two spellings
 SELECT coalesce(phone, 'n/a') FROM customers;  -- first non-NULL value
 ```
 
