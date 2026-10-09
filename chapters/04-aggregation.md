@@ -9,7 +9,7 @@ hide:
 
 ## Aggregate functions
 
-An aggregate collapses many rows into one value.
+Until now, every query returned individual rows. But most real questions are about the data as a whole: *How many customers do we have? What is the average price? What is the most expensive product?* Nobody wants to scroll through a million rows to answer those. An **aggregate function** reads many rows and **collapses them into a single value**, so the database does the arithmetic and you only receive the answer.
 
 ```sql
 SELECT count(*)            AS rows,
@@ -25,6 +25,10 @@ SELECT min(price), max(price), avg(price), sum(stock) FROM products;
 Other useful ones: `string_agg(name, ', ')` joins text values, `array_agg(x)` collects values into an array, and `bool_or(x)` is true when any input is true. `percentile_cont(0.5) WITHIN GROUP (ORDER BY price)` is an **ordered-set aggregate**: it sorts the values and finds the continuous 50th percentile (the median, interpolating when necessary).
 
 ## GROUP BY
+
+A plain aggregate gives you one answer for the *whole table*. Often you want one answer *per category*: customers **per country**, revenue **per month**, orders **per status**. `GROUP BY` does exactly that: it splits the rows into buckets, one bucket per distinct value of the grouping column(s), and then runs the aggregate separately inside each bucket. The result has one row per group.
+
+Think of it as "for each country, count the customers". Whenever a question contains "per", "by" or "for each", you probably need `GROUP BY`.
 
 ```sql
 SELECT country, count(*) AS customers
@@ -53,6 +57,8 @@ ORDER BY month, status;
 
 ## WHERE vs HAVING
 
+Sometimes you need to filter, but there are two different things you might want to filter: the **input rows** ("only orders from the last year") or the **results of the aggregation** ("only countries with more than 50 customers"). The second is impossible with `WHERE`, because the count does not exist yet when `WHERE` runs. That is the reason `HAVING` exists.
+
 `WHERE` filters rows *before* grouping; `HAVING` filters groups *after* aggregation.
 
 ```sql
@@ -67,6 +73,8 @@ Put as much as possible in `WHERE`: it reduces work earlier.
 
 ## FILTER: conditional aggregation
 
+Sometimes one report needs several numbers that each count a *different subset* of the same rows: all orders, cancelled orders, and the percentage between them. Without `FILTER` you would write a separate query per subset (and scan the table several times), or use awkward `CASE` tricks. `FILTER (WHERE ...)` attaches a condition to a single aggregate, so that aggregate only sees the matching rows while the others still see everything. One query, one pass over the data, many different numbers.
+
 ```sql
 SELECT count(*)                                   AS all_orders,
        count(*) FILTER (WHERE status = 'cancelled') AS cancelled,
@@ -77,6 +85,8 @@ FROM orders;
 This "pivot" trick (many conditional counts in one scan) is hugely useful for reports.
 
 ## ROLLUP / GROUPING SETS
+
+Reports usually need more than one level of detail at once: the count per country *and status*, plus a subtotal per country, plus a grand total. With plain `GROUP BY` that means running several queries and gluing them together with `UNION ALL`. `ROLLUP` produces all of those levels in one query: it groups by the full column list, then drops columns from the right one at a time to create subtotals, ending with a grand total. `GROUPING SETS` is the general form, where you list exactly which combinations of groupings you want.
 
 ```sql
 SELECT country, status, count(*)
