@@ -1,0 +1,41 @@
+site_name: Direct SQL against PostgreSQL
+docs_dir: /docs          # the repo root, mounted into the container
+site_dir: /site
+use_directory_urls: false   # makes the built site work from plain file:// too
+exclude_docs: |
+  book/mkdocs.yml
+  book/serve.ps1
+  data/
+  docker-compose.yml
+theme:
+  name: material
+  font: false              # system fonts; no internet needed
+  icon:
+    logo: material/database
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle: { icon: material/weather-sunny, name: Light mode }
+  features:
+    - navigation.top
+    - navigation.sections
+    - navigation.footer
+    - content.code.copy
+    - search.highlight
+extra_css:
+  - book/theme/extra.css
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+plugins:
+  - search

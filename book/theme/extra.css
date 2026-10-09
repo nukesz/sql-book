@@ -1,0 +1,73 @@
+/* PostgreSQL-flavoured palette (elephant blue) */
+:root, [data-md-color-scheme="default"] {
+  --md-primary-fg-color: #336791;
+  --md-primary-fg-color--light: #5b8db8;
+  --md-primary-fg-color--dark: #254c6d;
+  --md-accent-fg-color: #0b7285;
+  --md-typeset-a-color: #1f5f99;
+  --md-code-bg-color: #f3f6f9;
+  --learn-bg: #eaf2f9;
+}
+[data-md-color-scheme="slate"] {
+  --md-hue: 210;
+  --md-primary-fg-color: #2b5578;
+  --md-accent-fg-color: #4dc0d6;
+  --md-typeset-a-color: #7db7e8;
+  --learn-bg: #1d2b38;
+}
+
+/* Fonts: system stacks, so the book works fully offline */
+:root {
+  --md-text-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --md-code-font: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+}
+.md-typeset { font-size: 0.8rem; line-height: 1.7; }
+.md-content { max-width: 52rem; }
+
+/* Headings */
+.md-typeset h1 { font-weight: 700; color: var(--md-primary-fg-color); margin-bottom: 0.6em; }
+[data-md-color-scheme="slate"] .md-typeset h1 { color: #9cc9ee; }
+.md-typeset h2 {
+  font-weight: 600;
+  margin-top: 2em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+/* The "You will learn:" line under each chapter title becomes a callout */
+.md-typeset h1 + p {
+  background: var(--learn-bg);
+  border-left: 4px solid var(--md-accent-fg-color);
+  border-radius: 0 0.2rem 0.2rem 0;
+  padding: 0.7em 1em;
+}
+
+/* SQL code blocks */
+.md-typeset pre > code { border-radius: 0.25rem; font-size: 0.78em; line-height: 1.55; }
+.md-typeset .highlight { border-left: 3px solid var(--md-primary-fg-color--light); border-radius: 0.25rem; }
+.md-typeset code { border-radius: 0.2rem; }
+
+/* Collapsible solutions */
+.md-typeset details {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.3rem;
+  padding: 0 0.8em 0.4em;
+  margin: 1.2em 0;
+}
+.md-typeset details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.5em 0;
+  color: var(--md-primary-fg-color);
+}
+[data-md-color-scheme="slate"] .md-typeset details > summary { color: #9cc9ee; }
+.md-typeset details[open] > summary { border-bottom: 1px solid var(--md-default-fg-color--lightest); margin-bottom: 0.6em; }
+
+/* Tables */
+.md-typeset table:not([class]) { font-size: 0.75rem; border-radius: 0.25rem; }
+.md-typeset table:not([class]) th { background: var(--md-primary-fg-color); color: #fff; }
+
+/* Block quotes double as "note"/"tip" paragraphs */
+.md-typeset blockquote { border-left: 4px solid var(--md-primary-fg-color--light); color: var(--md-default-fg-color--light); }
+
+@media print { .md-typeset details { display: block; } }

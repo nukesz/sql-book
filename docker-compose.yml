@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: docker.io/postgres:17
+    container_name: direct-sql-pg
+    environment:
+      POSTGRES_USER: learner
+      POSTGRES_PASSWORD: learner
+      POSTGRES_DB: shop
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Scripts here run once, on first start of an empty volume.
+      - ./data:/docker-entrypoint-initdb.d:ro
+      # Whole book mounted so you can run \i /book/chapters/xx.sql inside the container.
+      - ./:/book:ro
+
+volumes:
+  pgdata:
