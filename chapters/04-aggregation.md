@@ -22,7 +22,32 @@ SELECT min(price), max(price), avg(price), sum(stock) FROM products;
 
 `count(*)` counts rows; `count(col)` counts non-NULL values. `sum`/`avg` over zero rows return `NULL` (not 0), so use `coalesce(sum(x), 0)`.
 
-Other useful ones: `string_agg(name, ', ')` joins text values, `array_agg(x)` collects values into an array, and `bool_or(x)` is true when any input is true. `percentile_cont(0.5) WITHIN GROUP (ORDER BY price)` is an **ordered-set aggregate**: it sorts the values and finds the continuous 50th percentile (the median, interpolating when necessary).
+Other useful ones: `string_agg(name, ', ')` joins text values, `array_agg(x)` collects values into an array, and `bool_or(x)` is true when any input is true.
+
+The **median** (the middle value when sorted) is not a plain aggregate like `avg`. PostgreSQL has a special syntax for it, `percentile_cont`, called an **ordered-set aggregate**: you tell it *which* percentile you want (0.5 = the 50th, i.e. the median) and *how to sort* the values.
+
+```sql
+SELECT avg(price)                                       AS average,
+       percentile_cont(0.5) WITHIN GROUP (ORDER BY price) AS median
+FROM products;
+```
+
+If the number of values is even, it interpolates between the two middle ones.
+
+Why the odd syntax? Normal aggregates such as `avg(price)` or `max(price)` give the same result no matter what order the rows arrive in. A median does not: it is "the value in the middle", which only exists once the values are sorted. So the call is split in two parts:
+
+```sql
+percentile_cont(0.5) WITHIN GROUP (ORDER BY price)
+--              ^^^                      ^^^^^
+--  which percentile (0 to 1)     which column, sorted how
+```
+
+- The argument in `percentile_cont(...)` is **not** a column but a fraction: `0.5` is the median, `0.9` the 90th percentile.
+- `WITHIN GROUP (ORDER BY ...)` holds the column and the sort order. It is required.
+
+Only a few functions work this way: `percentile_cont` (interpolates between values), `percentile_disc` (returns an actual value from the data) and `mode()` (the most frequent value).
+
+Don't confuse it with `string_agg(name, ', ' ORDER BY name)`: that is a normal aggregate with an optional `ORDER BY` that only controls the order of the joined text.
 
 ## GROUP BY
 
@@ -76,7 +101,7 @@ Put as much as possible in `WHERE`: it reduces work earlier.
 Sometimes one report needs several numbers that each count a *different subset* of the same rows: all orders, cancelled orders, and the percentage between them. Without `FILTER` you would write a separate query per subset (and scan the table several times), or use awkward `CASE` tricks. `FILTER (WHERE ...)` attaches a condition to a single aggregate, so that aggregate only sees the matching rows while the others still see everything. One query, one pass over the data, many different numbers.
 
 ```sql
-SELECT count(*)                                   AS all_orders,
+SELECT count(*)                                     AS all_orders,
        count(*) FILTER (WHERE status = 'cancelled') AS cancelled,
        round(100.0 * count(*) FILTER (WHERE status = 'cancelled') / count(*), 1) AS pct_cancelled
 FROM orders;
@@ -86,15 +111,44 @@ This "pivot" trick (many conditional counts in one scan) is hugely useful for re
 
 ## ROLLUP / GROUPING SETS
 
-Reports usually need more than one level of detail at once: the count per country *and status*, plus a subtotal per country, plus a grand total. With plain `GROUP BY` that means running several queries and gluing them together with `UNION ALL`. `ROLLUP` produces all of those levels in one query: it groups by the full column list, then drops columns from the right one at a time to create subtotals, ending with a grand total. `GROUPING SETS` is the general form, where you list exactly which combinations of groupings you want.
+A report often wants totals at several levels at once. Say you count orders per status and month, but you also want a total for each status and one overall total. A plain `GROUP BY` gives only the most detailed level. `ROLLUP` adds the extra total rows for you, in the same query.
 
 ```sql
-SELECT country, status, count(*)
-FROM customers c JOIN orders o ON o.customer_id = c.id
-GROUP BY ROLLUP (country, status);   -- adds subtotals per country and a grand total (NULL = "all")
+SELECT status,
+       date_trunc('month', created_at) AS month,
+       count(*) AS orders
+FROM orders
+GROUP BY ROLLUP (status, date_trunc('month', created_at))
+ORDER BY status, month;
 ```
 
-Be careful: a `NULL` in a rollup column can mean either "all values" or a real `NULL` from the data. `GROUPING(country)` and `GROUPING(status)` return `1` for subtotal columns and `0` for values originating in rows.
+This is the same query as the two-column `GROUP BY` example above, with `ROLLUP (...)` around the grouping columns. The result looks like this (numbers are made up; `month` is the first day of the month, as `date_trunc` returns it):
+
+```text
+  status   |         month          | orders
+-----------+------------------------+--------
+ cancelled | 2025-10-01 00:00:00+00 |    214
+ cancelled | 2025-11-01 00:00:00+00 |    245
+ cancelled |                        |    459
+ paid      | 2025-10-01 00:00:00+00 |   1310
+ paid      | 2025-11-01 00:00:00+00 |   1275
+ paid      |                        |   2585
+           |                        |   3044
+```
+
+In `psql`, `NULL` is shown as an empty cell.
+
+There are three kinds of rows:
+
+- **Detail rows** (status and month filled in): the normal `GROUP BY` result.
+- **Subtotal rows** (status filled in, month `NULL`): all months of that status added together.
+- **Grand total row** (both `NULL`): everything.
+
+`NULL` here means "all values". `ROLLUP (a, b)` works from the right: it groups by `(a, b)`, then by `(a)`, then by nothing at all.
+
+**Caution:** a `NULL` in these columns can also be real data if the column allows `NULL` (like `phone` in `customers`). To tell the two apart, use `GROUPING(month)`, which returns `1` when the `NULL` is a subtotal marker and `0` when it comes from a row.
+
+`GROUPING SETS` is the general form: instead of the fixed "drop from the right" pattern, you list exactly which groupings you want. You will rarely need it at first.
 
 ## Exercises
 
@@ -124,7 +178,8 @@ Be careful: a `NULL` in a rollup column can mean either "all values" or a real `
     FROM customers GROUP BY country;
     -- 6
     SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY price) FROM products;
-    -- 7  No rows -> sum of nothing is NULL. Use coalesce(sum(stock), 0).
+    -- 7  No rows match -> the sum of nothing is NULL, not 0.
+    SELECT coalesce(sum(stock), 0) FROM products WHERE price > 10000;
     ```
 
 Next: [5. Joins](05-joins.md)
