@@ -40,6 +40,12 @@ SELECT 1 + floor(random() * 1000)::int,
                              mins => floor(random() * 1440)::int)
 FROM generate_series(1, 20000);
 
+-- Inserted *after* the orders above, so nothing can reference it: customer 1001
+-- never placed an order, which is what anti-join exercises look for.
+INSERT INTO customers (email, name, country, phone, created_at)
+VALUES ('user1001@example.com', 'Customer 1001', 'HU', '+36100001001',
+        now() - interval '10 days');
+
 INSERT INTO order_items (order_id, line_no, product_id, quantity, unit_price)
 SELECT o.id, l, p.id, 1 + floor(random() * 3)::int, p.price
 FROM orders o

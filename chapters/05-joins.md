@@ -72,6 +72,31 @@ LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'shipped';   -- right
 
 Filters on the *optional* side go into `ON`.
 
+### FULL JOIN
+
+All rows from both sides, NULL-padded wherever there's no match on that side:
+
+```sql
+SELECT cat.name AS category, p.name AS product
+FROM categories cat
+FULL JOIN products p ON p.category_id = cat.id
+WHERE p.id IS NULL OR cat.id IS NULL;
+```
+
+Rows with `p.id IS NULL`: Books, Electronics, Home — the 3 top-level categories, which hold no products directly (products only reference the 6 child categories). Rows with `cat.id IS NULL`: none, ever — `products.category_id` is `NOT NULL` and FK-constrained, so a product without a category can't exist. FULL JOIN only differs from LEFT JOIN when *both* sides can have unmatched rows; a foreign key rules that out on one side by design.
+
+### CROSS JOIN
+
+Every row of one side paired with every row of the other — n × m rows, no `ON` condition:
+
+```sql
+SELECT cat.name AS category, co.country
+FROM (SELECT name FROM categories WHERE parent_id IS NULL) cat
+CROSS JOIN (SELECT DISTINCT country FROM customers) co;
+```
+
+3 top-level categories × 6 countries = 18 rows: every combination, not just ones that "match" anything.
+
 ## Multi-table joins
 
 ```sql
@@ -134,7 +159,37 @@ WHERE c.id <= 5;
 
 ## USING and NATURAL
 
-`JOIN x USING (col)` is shorthand when both sides have the identically named column. Avoid `NATURAL JOIN`: it silently changes meaning if columns are added.
+Joins are often written against schemas where a foreign key carries the *same name* as the column it points at — `order_id` in both tables, rather than this book's `orders.id` / `order_items.order_id`. In that case the `ON` clause says the column name twice and nothing else: `ON a.order_id = b.order_id`. SQL offers two shorthands for exactly that situation. They look similar and are not: one asks you to name the columns, the other guesses them from the schema.
+
+### USING
+
+`USING (col, ...)` means: join on equality of these columns, and *merge* each pair into a single output column. The merge is the part people forget — after a `USING (order_id)` there is one `order_id`, not two, and you write it unqualified.
+
+Because this schema names its keys `id` and `customer_id`, `USING` rarely fits the base tables. It fits derived tables, where you choose the column names:
+
+```sql
+WITH totals AS (
+    SELECT order_id, sum(quantity * unit_price) AS total
+    FROM order_items GROUP BY order_id
+)
+SELECT order_id, t.total, oi.line_no
+FROM order_items oi
+JOIN totals t USING (order_id);     -- same as: ON t.order_id = oi.order_id
+```
+
+### NATURAL
+
+`NATURAL JOIN` takes no column list at all. It joins on *every* column name the two sides happen to share. Two consequences follow, and both are bad: the join condition appears nowhere in the query, and it is decided by whatever the tables look like today. Add a column to both tables and every `NATURAL JOIN` between them silently means something new.
+
+Our own tables show how fast that goes wrong:
+
+```sql
+SELECT * FROM products NATURAL JOIN categories;   -- 0 rows
+```
+
+`products` and `categories` share `id` *and* `name`, so the condition is `products.id = categories.id AND products.name = categories.name` — not the `category_id` join anyone intended, and empty in practice.
+
+Rule: use `ON`. Use `USING` when the names genuinely line up and you want the merged column. Never use `NATURAL`.
 
 ## Exercises
 
@@ -158,7 +213,9 @@ WHERE c.id <= 5;
     -- 2
     SELECT c.id, count(o.id) FROM customers c LEFT JOIN orders o ON o.customer_id = c.id GROUP BY c.id;
     -- 3
-    SELECT c.* FROM customers c WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);
+    SELECT c.* FROM customers c
+    LEFT JOIN orders o ON o.customer_id = c.id
+    WHERE o.id IS NULL;
     -- 4
     SELECT p.name, sum(oi.quantity) q FROM order_items oi
     JOIN products p ON p.id = oi.product_id

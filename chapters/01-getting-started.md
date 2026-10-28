@@ -111,7 +111,7 @@ customers 1 ──< orders 1 ──< order_items >── 1 products >── 1 ca
 
 `1 ──<` means "one-to-many": one customer can have many orders. `order_items` holds the lines of an order: each row says "this order contains this product". A category may point to another category through `parent_id`, which creates the category tree.
 
-- `customers` (1,000) - email, country, optional phone
+- `customers` (1,001) - email, country, optional phone; one of them never ordered
 - `categories` (9) - a two-level tree via `parent_id`
 - `products` (200) - price, stock, `attributes jsonb`, `tags text[]`
 - `orders` (20,000) - status: `new`, `paid`, `shipped`, `cancelled`
