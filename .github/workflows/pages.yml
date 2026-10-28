@@ -1,0 +1,44 @@
+name: Build and deploy book
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build site with mkdocs-material
+        run: |
+          mkdir -p site
+          docker run --rm \
+            -v "${{ github.workspace }}:/docs:ro" \
+            -v "${{ github.workspace }}/book/mkdocs.yml:/mkdocs.yml:ro" \
+            -v "${{ github.workspace }}/site:/site" \
+            docker.io/squidfunk/mkdocs-material build -f /mkdocs.yml -d /site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
