@@ -1,9 +1,6 @@
----
-hide:
-  - toc
----
-
 # Direct SQL against PostgreSQL
+
+Read online: https://nukesz.github.io/sql-book/
 
 A hands-on book that goes from "what is a table" to concurrency, query plans, partitioning and operations. No tooling needed beyond a PostgreSQL server and `psql` (or any SQL client).
 
