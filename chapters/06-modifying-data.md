@@ -33,6 +33,8 @@ SELECT 'copy_' || email, name, country FROM customers WHERE country = 'NO';
 
 Always list the column names. Omitted columns get their `DEFAULT` (or `NULL`). `id` is `GENERATED ALWAYS AS IDENTITY`, so you do not supply it.
 
+`INSERT ... SELECT` inserts one row for every row the query returns — here a copy of each Norwegian customer. `||` is the string concatenation operator, so `'copy_' || email` produces `copy_ada@example.com`; `email` is `UNIQUE`, so the copies need a value of their own.
+
 ### RETURNING
 
 PostgreSQL can hand back the affected rows, so you do not need a second query to learn the generated id:
