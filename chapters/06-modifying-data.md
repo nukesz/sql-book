@@ -58,11 +58,13 @@ RETURNING id, created_at;
 `UPDATE` assigns new values to the columns of the rows that `WHERE` selects, several columns in one comma-separated `SET`. Each new value may be computed from the old one, so the whole change happens inside the server in one statement. Reading a row into your application, computing there, and writing it back is both slower and a race against other sessions (chapter 12).
 
 ```sql
-UPDATE products SET price = price * 1.05 WHERE category_id = 5;  -- new value from the old one: +5%
+-- new value computed from the old one: +5%
+UPDATE products SET price = price * 1.05 WHERE category_id = 5;
 
+-- two columns at once; tags is text[], array_append returns a new array (chapter 15)
 UPDATE products
 SET stock = stock - 1,
-    tags = array_append(tags, 'low')   -- tags is text[]; array_append returns a new array (chapter 15)
+    tags = array_append(tags, 'low')
 WHERE id = 10
 RETURNING *;
 ```
