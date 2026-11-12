@@ -22,18 +22,18 @@ This book assumes nothing at the start and goes deep by the end. Skip what you a
 Any PostgreSQL 14+ works. The easiest way is the `docker-compose.yml` in the repository root:
 
 ```bash
-podman compose up -d
+docker compose up -d
 ```
 
 First start creates the `shop` database and loads `data/01-schema.sql` and `data/02-seed.sql` automatically. To reset everything to the initial state:
 
 ```bash
-podman compose down -v && podman compose up -d
+docker compose down -v && docker compose up -d
 ```
 
-### Without Podman
+### Without docker
 
-Docker works the same way: replace `podman` with `docker` in every command in this chapter. If you have neither, install PostgreSQL directly and set up the database by hand:
+If you have docker, install PostgreSQL directly and set up the database by hand:
 
 1. **Install PostgreSQL 14 or newer** from [postgresql.org/download](https://www.postgresql.org/download/) (Windows/macOS installers), or with a package manager: `brew install postgresql@17` (macOS), `sudo apt install postgresql` (Debian/Ubuntu). Make sure the `psql` client is installed too; the installers include it. During a Windows/macOS install you choose a password for the superuser `postgres`; remember it.
 2. **Open a terminal in the repository root** (the folder containing `data/`). On Windows, use the "SQL Shell (psql)" from the Start menu or add PostgreSQL's `bin` folder to your `PATH`.
@@ -57,14 +57,14 @@ Docker works the same way: replace `podman` with `docker` in every command in th
 
 To start over, connect as the superuser and run `DROP DATABASE shop;`, then repeat steps 3 and 4.
 
-From here on, use the "local psql" form from the next section: `psql -h localhost -U learner -d shop`. Skip the `podman exec` command.
+From here on, use the "local psql" form from the next section: `psql -h localhost -U learner -d shop`. Skip the `docker exec` command.
 
 ## Connecting with psql
 
 `psql` is the official command-line client. Use the one in the container (nothing to install):
 
 ```bash
-podman exec -it direct-sql-pg psql -U learner -d shop
+docker exec -it direct-sql-pg psql -U learner -d shop
 ```
 
 or a local one: `psql -h localhost -U learner -d shop` (password `learner`).
