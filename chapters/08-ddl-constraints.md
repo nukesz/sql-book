@@ -43,6 +43,17 @@ Read it as five decisions:
 
 Most constraints can be written next to the column or as a table constraint at the end. `UNIQUE (product_id, customer_id)` has to be at the table level because it spans two columns.
 
+### Copying a table's shape
+
+`CREATE TABLE ... (LIKE other_table)` creates a new **empty** table with the same columns and types as an existing one:
+
+```sql
+CREATE TABLE orders_archive (LIKE orders);                 -- columns only
+CREATE TABLE orders_archive (LIKE orders INCLUDING ALL);   -- also constraints, indexes, defaults
+```
+
+Without `INCLUDING ALL`, the copy has the same shape but none of the constraints, indexes, or defaults, and no rows. It is a snapshot, not a link: later `ALTER TABLE orders` does not change `orders_archive`. This is handy for an archive table that should mirror the source's columns.
+
 ## The constraint toolbox
 
 Each rule in the example comes from a small set of constraint types:
